@@ -2,18 +2,8 @@
 
 using namespace std;
 
-unordered_map<array4, int, arr_hash, arr_equal> dict;
+unordered_map<array4, int, arr_hash, arr_equal> dict; // the dictionary
 
-/**
- * @param value we guarantee that 0 <= value <= 255
- * @return <lit_code, lit_code_bit_width>
- * Lit Value    Bits        Codes
-   ---------    ----        -----
-     0 - 143     8          00110000 through 10111111
-   144 - 255     9          110010000 through 111111111
-   256 - 279     7          0000000 through 0010111
-   280 - 287     8          11000000 through 11000111
- */
 tuple<uint16_t, int> get_lit_code(int value) {
     uint16_t code;
     int bit_width = 0;
@@ -34,22 +24,6 @@ tuple<uint16_t, int> get_lit_code(int value) {
     return {code, bit_width};
 }
 
-/**
- * @param length we guarantee here that the 3 <= length <= 258
- * @return <code, extra_bit, extra_bit_width>
-Code Bits Length(s) Code Bits Lengths   Code Bits Length(s)
----- ---- ------     ---- ---- -------   ---- ---- -------
- 257   0     3       267   1   15,16     277   4   67-82
- 258   0     4       268   1   17,18     278   4   83-98
- 259   0     5       269   2   19-22     279   4   99-114
- 260   0     6       270   2   23-26     280   4  115-130
- 261   0     7       271   2   27-30     281   5  131-162
- 262   0     8       272   2   31-34     282   5  163-194
- 263   0     9       273   3   35-42     283   5  195-226
- 264   0    10       274   3   43-50     284   5  227-257
- 265   1  11,12      275   3   51-58     285   0    258
- 266   1  13,14      276   3   59-66
- */
 tuple<int, uint16_t, int> length_value(int length) {
     int value = 0;
     uint16_t extra_bit = 0;
@@ -166,10 +140,6 @@ tuple<int, uint16_t, int> length_value(int length) {
     return {value, extra_bit, bit_width};
 }
 
-/**
- * @param length
- * @return <len_code, len_code_bit_width>
- */
 tuple<uint16_t, int> get_len_code(int length) {
     // we guarantee that 256 <= value <= 285
     auto [value, extra_bit, bit_width] = length_value(length);
@@ -231,22 +201,6 @@ uint16_t reverse_extra_bit(uint16_t extra_bit, int bit_width) {
     return extra_bit;
 }
 
-/**
- * @param offset 1-32768
- * @return <pre_dis_code, extra_bit, bit_width>
- Code Bits Dist  Code Bits   Dist     Code Bits Distance
- ---- ---- ----  ---- ----  ------    ---- ---- --------
-   0   0    1     10   4     33-48    20    9   1025-1536
-   1   0    2     11   4     49-64    21    9   1537-2048
-   2   0    3     12   5     65-96    22   10   2049-3072
-   3   0    4     13   5     97-128   23   10   3073-4096
-   4   1   5,6    14   6    129-192   24   11   4097-6144
-   5   1   7,8    15   6    193-256   25   11   6145-8192
-   6   2   9-12   16   7    257-384   26   12  8193-12288
-   7   2  13-16   17   7    385-512   27   12 12289-16384
-   8   3  17-24   18   8    513-768   28   13 16385-24576
-   9   3  25-32   19   8   769-1024   29   13 24577-32768
- */
 tuple<uint8_t, uint16_t, int> get_dis_code(int offset) {
     uint8_t pre_code;
     uint16_t extra_bit;
@@ -421,13 +375,6 @@ void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint16_t 
     }
 }
 
-/**
- * This method just for 5 bits
- * @param out_code
- * @param cur_arr_pos
- * @param cur_bit_pos
- * @param to_write
- */
 void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint8_t to_write) {
     if (cur_bit_pos == 0) out_code[cur_arr_pos] = 0;
 
@@ -447,15 +394,6 @@ void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint8_t t
     }
 }
 
-/**
- *
- * @param content
- * @param real_len
- * @param buffer_start not update the buffer_start in this method
- * @param match_index the index of the matched string
- * @return match_len
- * we guarantee buffer_start+3 will not out of bound
- */
 tuple<int, int> match(const uint8_t *content, uint64_t real_len, int buffer_start, int *index) {
     array4 to_match = {content[buffer_start], content[buffer_start+1],
                            content[buffer_start+2], content[buffer_start+3]};
@@ -466,7 +404,7 @@ tuple<int, int> match(const uint8_t *content, uint64_t real_len, int buffer_star
         int cur_target = f->second;
 
         // we have at least one valid matching
-        if (buffer_start-cur_target <= MAX_DISTANCE) matching = true;
+        if (buffer_start-cur_target <= MAX_DISTANCE && buffer_start-cur_target >= 4) matching = true;
 
         while (matching) {
             int target_index = cur_target;
@@ -476,14 +414,16 @@ tuple<int, int> match(const uint8_t *content, uint64_t real_len, int buffer_star
             int cur_match = 0;
             while (buffer_index < real_len && target_index < buffer_start && cur_match < MAX_LEN) {
                 if (content[target_index] != content[buffer_index]) break;
+                cur_match++;
                 target_index++;
                 buffer_index++;
-                cur_match++;
             }
             if (match_len < cur_match) {
                 match_index = cur_target;
                 match_len = cur_match;
             }
+            if (buffer_index >= real_len) break;
+            if (match_len == MAX_LEN) break;
             if (index[cur_target] == cur_target) break;
             cur_target = index[cur_target];
         }
@@ -588,6 +528,7 @@ uint32_t lz77(ifstream &in, ofstream &out) {
                 temp_bit_width = cur_bit_pos;
             }
         }
+        else temp_bit_width = 0;
 
         // reverse byte
         for (int i = 0; i < cur_arr_pos; ++i) {

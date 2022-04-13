@@ -1,5 +1,6 @@
 #pragma once
-
+#include <filesystem>
+#include <iostream>
 #include <fstream>
 #include <cstdint>
 
@@ -115,5 +116,4 @@ void write_little_end(std::ofstream &file, uint16_t b);
 void write_local_file_header(std::ofstream &file, local_file_header &file_header, std::string &file_cname, bool is_local_header);
 void write_cd_header(std::ofstream &file, central_directory_header &cd_header, std::string &file_cname);
 void write_end_of_cd_record(std::ofstream &file, end_of_cd_record &cdr);
-uint32_t lz77(std::ifstream &in, std::ofstream  &out);
 std::tuple<uint32_t, uint32_t> crc32(std::ifstream &file, uint32_t size);

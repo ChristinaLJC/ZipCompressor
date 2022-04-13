@@ -1,16 +1,16 @@
-#include <filesystem>
-#include <iostream>
 #include "compression.h"
+#include "lz77.h"
 
 using namespace std;
 
 int main() {
-    string file_name = "zero"; // file name without suffix
-    string suffix = ".txt"; // file suffix
+    // todo the following information should be changed according to the path
+    string file_name = "test"; // file name without suffix
+    string suffix = ".pptx"; // file suffix
     string file_cname = file_name + suffix; // file name with suffix
-    string input_path = "C:/Users/Christina/CLionProjects/ZipCompression4.0/"+file_cname;
+    string input_path = "C:/Users/Christina/CLionProjects/ZipCompression5.0/"+file_cname;
     ifstream input_file (input_path, ios::in | ios::binary);
-    ofstream output_file ("C:/Users/Christina/CLionProjects/ZipCompression4.0/"+file_name+".zip", ios::out | ios::binary);
+    ofstream output_file ("C:/Users/Christina/CLionProjects/ZipCompression5.0/"+file_name+".zip", ios::out | ios::binary);
 
     // set local file header
     local_file_header file_header;
@@ -21,6 +21,7 @@ int main() {
     file_header.uncompressed_size = uncompressed_size;
     write_local_file_header(output_file, file_header, file_cname, true);
 
+    // compress
     file_header.compressed_size = lz77(input_file, output_file);
 
     // set central directory header
@@ -40,7 +41,6 @@ int main() {
 
     return 0;
 }
-
 
 void set_time(uint16_t &mod_time, uint16_t &mod_date) { // set time for local file header
     time_t tt = time(nullptr);
@@ -87,8 +87,6 @@ tuple<uint32_t, uint32_t> crc32(ifstream &file, uint32_t size) {
     delete [] content;
     return {crc^0xFFFFFFFF, size};
 }
-
-
 
 void write_local_file_header(ofstream &file, local_file_header &file_header, string &file_cname, bool is_local_header) {
     if (is_local_header) write_little_end(file, file_header.signature);
