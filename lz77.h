@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <tuple>
 
-#define MAX_LEN 32768
+#define MAX_DISTANCE 32768
+#define MAX_LEN 258
 #define BLOCK 327680
 
 typedef std::array<uint8_t, 4> array4;

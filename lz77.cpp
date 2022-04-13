@@ -3,7 +3,6 @@
 using namespace std;
 
 unordered_map<array4, int, arr_hash, arr_equal> dict;
-//int index[BLOCK];
 
 /**
  * @param value we guarantee that 0 <= value <= 255
@@ -467,15 +466,15 @@ tuple<int, int> match(const uint8_t *content, uint64_t real_len, int buffer_star
         int cur_target = f->second;
 
         // we have at least one valid matching
-        if (buffer_start-cur_target <= MAX_LEN) matching = true;
+        if (buffer_start-cur_target <= MAX_DISTANCE) matching = true;
 
         while (matching) {
             int target_index = cur_target;
             int buffer_index = buffer_start;
             // the distance is too long, we do not use this matching pair
-            if (buffer_index-target_index > MAX_LEN) break;
+            if (buffer_index-target_index > MAX_DISTANCE) break;
             int cur_match = 0;
-            while (buffer_index < real_len && target_index < buffer_start) {
+            while (buffer_index < real_len && target_index < buffer_start && cur_match < MAX_LEN) {
                 if (content[target_index] != content[buffer_index]) break;
                 target_index++;
                 buffer_index++;
@@ -561,11 +560,6 @@ uint32_t lz77(ifstream &in, ofstream &out) {
                 continue;
             }
 
-            // todo
-            if (cur_arr_pos > 62098) {
-                int i = 0;
-            }
-
             auto [match_len, match_index] = match(content, real_len, buffer_start, index);
             if (match_len) {
                 auto [len_code, bit_width1] = get_len_code(match_len);
@@ -585,26 +579,19 @@ uint32_t lz77(ifstream &in, ofstream &out) {
         write_code(out_code, cur_arr_pos, cur_bit_pos, 0b0000000, 7);
 
         // the encoding for this block is finished
-        if (isLast) cur_arr_pos++;
-        else if (cur_bit_pos != 0) {
-            temp_code = out_code[cur_arr_pos];
-            temp_bit_width = cur_bit_pos;
+        if (cur_bit_pos != 0) {
+            if (isLast) {
+                cur_arr_pos++;
+            }
+            else {
+                temp_code = out_code[cur_arr_pos];
+                temp_bit_width = cur_bit_pos;
+            }
         }
-
-        // todo
-
-//        int zerocount = 0;
 
         // reverse byte
         for (int i = 0; i < cur_arr_pos; ++i) {
             out_code[i] = (char) reverse_table[out_code[i]];
-
-            /*if (!out_code[i]) zerocount++;
-            else zerocount = 0;
-            if (zerocount > 10) {
-                cout << i;
-                throw zerocount;
-            }*/
         }
         // write data
         out.write(reinterpret_cast<char *>(out_code), cur_arr_pos);

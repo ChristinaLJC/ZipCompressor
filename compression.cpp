@@ -5,12 +5,12 @@
 using namespace std;
 
 int main() {
-    string file_name = "big"; // file name without suffix
+    string file_name = "zero"; // file name without suffix
     string suffix = ".txt"; // file suffix
     string file_cname = file_name + suffix; // file name with suffix
-    string input_path = "C:/Users/Christina/CLionProjects/ZipCompression3.0/"+file_cname;
-    ifstream input_file (input_path, ios::in);
-    ofstream output_file ("C:/Users/Christina/CLionProjects/ZipCompression3.0/"+file_name+".zip", ios::out | ios::binary);
+    string input_path = "C:/Users/Christina/CLionProjects/ZipCompression4.0/"+file_cname;
+    ifstream input_file (input_path, ios::in | ios::binary);
+    ofstream output_file ("C:/Users/Christina/CLionProjects/ZipCompression4.0/"+file_name+".zip", ios::out | ios::binary);
 
     // set local file header
     local_file_header file_header;
