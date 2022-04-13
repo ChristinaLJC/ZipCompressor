@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(ZipCompression compression.cpp lz77.cpp)
 
-add_executable(test test.cpp)
+add_executable(generate generate.cpp)

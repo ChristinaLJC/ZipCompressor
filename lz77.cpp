@@ -3,7 +3,7 @@
 using namespace std;
 
 unordered_map<array4, int, arr_hash, arr_equal> dict;
-int index[BLOCK];
+//int index[BLOCK];
 
 /**
  * @param value we guarantee that 0 <= value <= 255
@@ -37,7 +37,7 @@ tuple<uint16_t, int> get_lit_code(int value) {
 
 /**
  * @param length we guarantee here that the 3 <= length <= 258
- * @return <code, extra_bit>
+ * @return <code, extra_bit, extra_bit_width>
 Code Bits Length(s) Code Bits Lengths   Code Bits Length(s)
 ---- ---- ------     ---- ---- -------   ---- ---- -------
  257   0     3       267   1   15,16     277   4   67-82
@@ -51,9 +51,10 @@ Code Bits Length(s) Code Bits Lengths   Code Bits Length(s)
  265   1  11,12      275   3   51-58     285   0    258
  266   1  13,14      276   3   59-66
  */
-tuple<int, uint8_t> length_value(int length) {
+tuple<int, uint16_t, int> length_value(int length) {
     int value = 0;
-    uint8_t extra_bit = 0;
+    uint16_t extra_bit = 0;
+    int bit_width = 0;
     if (length == 3) value = 257;
     else if (length == 4) value = 258;
     else if (length == 5) value = 259;
@@ -64,86 +65,106 @@ tuple<int, uint8_t> length_value(int length) {
     else if (length == 10) value = 264;
     else if (length == 11 || length == 12) {
         extra_bit = length-11;
+        bit_width = 1;
         value = 265;
     }
     else if (length == 13 || length == 14) {
         extra_bit = length-13;
+        bit_width = 1;
         value = 266;
     }
     else if (length == 15 || length == 16) {
         extra_bit = length-15;
+        bit_width = 1;
         value = 267;
     }
     else if (length == 17 || length == 18) {
         extra_bit = length-17;
+        bit_width = 1;
         value = 268;
     }
     else if (length <= 22) {
         extra_bit = length-19;
+        bit_width = 2;
         value = 269;
     }
     else if (length <= 26) {
         extra_bit = length-23;
+        bit_width = 2;
         value = 270;
     }
     else if (length <= 30) {
         extra_bit = length-27;
+        bit_width = 2;
         value = 271;
     }
     else if (length <= 34) {
         extra_bit = length-31;
+        bit_width = 2;
         value = 272;
     }
     else if (length <= 42) {
         extra_bit = length-35;
+        bit_width = 3;
         value = 273;
     }
     else if (length <= 50) {
         extra_bit = length-43;
+        bit_width = 3;
         value = 274;
     }
     else if (length <= 58) {
         extra_bit = length-51;
+        bit_width = 3;
         value = 275;
     }
     else if (length <= 66) {
         extra_bit = length-59;
+        bit_width = 3;
         value = 276;
     }
     else if (length <= 82) {
         extra_bit = length-67;
+        bit_width = 4;
         value = 277;
     }
     else if (length <= 98) {
         extra_bit = length-83;
+        bit_width = 4;
         value = 278;
     }
     else if (length <= 114) {
         extra_bit = length-99;
+        bit_width = 4;
         value = 279;
     }
     else if (length <= 130) {
         extra_bit = length-115;
+        bit_width = 4;
         value = 280;
     }
     else if (length <= 162) {
         extra_bit = length-131;
+        bit_width = 5;
         value = 281;
     }
     else if (length <= 194) {
         extra_bit = length-163;
+        bit_width = 5;
         value = 282;
     }
     else if (length <= 226) {
         extra_bit = length-195;
+        bit_width = 5;
         value = 283;
     }
     else if (length <= 257) {
         extra_bit = length-227;
+        bit_width = 5;
         value = 284;
     }
     else value = 285; // length == 258
-    return {value, extra_bit};
+    return {value, extra_bit, bit_width};
 }
 
 /**
@@ -151,34 +172,28 @@ tuple<int, uint8_t> length_value(int length) {
  * @return <len_code, len_code_bit_width>
  */
 tuple<uint16_t, int> get_len_code(int length) {
-    int bit_width = 0;
     // we guarantee that 256 <= value <= 285
-    auto [value, extra_bit] = length_value(length);
-    // todo 无有效extrabit, 数组初始化的问题，compressed size修改的问题
+    auto [value, extra_bit, bit_width] = length_value(length);
+    extra_bit = reverse_extra_bit(extra_bit, bit_width);
     uint16_t code;
     if (value <= 279) {
         code = 0b0000000;
         for (int i = 256; i < value; ++i) {
             code += 0b0000001;
         }
-        bit_width = 7;
+        bit_width += 7; // add the bit_width of pre_code
+
+        // the following is binding the extra_bit with the code
         if (value >= 265 && value <= 268) {
             code = (code << 1) | extra_bit;
-            bit_width++;
         }
         else if (value >= 269 && value <= 272) {
-            bit_width += 2;
-            extra_bit = reverse_extra_bit(extra_bit, bit_width);
             code = (code << 2) | extra_bit;
         }
         else if (value >= 273 && value <= 276) {
-            bit_width += 3;
-            extra_bit = reverse_extra_bit(extra_bit, bit_width);
             code = (code << 3) | extra_bit;
         }
         else if (value >= 277 && value <= 279) {
-            bit_width += 4;
-            extra_bit = reverse_extra_bit(extra_bit, bit_width);
             code = (code << 4) | extra_bit;
         }
     }
@@ -187,17 +202,14 @@ tuple<uint16_t, int> get_len_code(int length) {
         for (int i = 280; i < value; ++i) {
             code += 0b00000001;
         }
+        bit_width += 8; // add the bit_width of pre_code
+
         if (value == 280) {
-            bit_width += 4;
-            extra_bit = reverse_extra_bit(extra_bit, bit_width);
             code = (code << 4) | extra_bit;
         }
         else if (value >= 281 && value <= 284) {
-            bit_width += 5;
-            extra_bit = reverse_extra_bit(extra_bit, bit_width);
             code = (code << 5) | extra_bit;
         }
-        bit_width += 8;
     }
     return {code, bit_width};
 }
@@ -380,6 +392,8 @@ tuple<uint8_t, uint16_t, int> get_dis_code(int offset) {
 }
 
 void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint16_t to_write, int bit_width) {
+    if (cur_bit_pos == 0) out_code[cur_arr_pos] = 0;
+
     if (bit_width <= 8 - cur_bit_pos) {
         out_code[cur_arr_pos] |= to_write << (8-cur_bit_pos-bit_width);
         if (bit_width == 8 - cur_bit_pos) {
@@ -388,11 +402,23 @@ void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint16_t 
         }
         else cur_bit_pos += bit_width;
     }
-    else {
+    else if (bit_width <= 16 - cur_bit_pos) {
         out_code[cur_arr_pos] |= to_write >> (bit_width-8+cur_bit_pos);
         cur_arr_pos++;
         out_code[cur_arr_pos] = to_write << (16-bit_width-cur_bit_pos);
-        cur_bit_pos = bit_width-8+cur_bit_pos;
+        if (bit_width == 16 - cur_bit_pos) {
+            cur_arr_pos++;
+            cur_bit_pos = 0;
+        }
+        else cur_bit_pos = bit_width-8+cur_bit_pos;
+    }
+    else {
+        out_code[cur_arr_pos] |= to_write >> (bit_width-8+cur_bit_pos);
+        cur_arr_pos++;
+        out_code[cur_arr_pos] = to_write >> (bit_width-16+cur_bit_pos);
+        cur_arr_pos++;
+        out_code[cur_arr_pos] = to_write << (24-bit_width-cur_bit_pos);
+        cur_bit_pos = bit_width-16+cur_bit_pos;
     }
 }
 
@@ -404,6 +430,8 @@ void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint16_t 
  * @param to_write
  */
 void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint8_t to_write) {
+    if (cur_bit_pos == 0) out_code[cur_arr_pos] = 0;
+
     if (cur_bit_pos <= 3) {
         out_code[cur_arr_pos] |= to_write << (3-cur_bit_pos);
         if (cur_bit_pos == 3) {
@@ -420,7 +448,6 @@ void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint8_t t
     }
 }
 
-
 /**
  *
  * @param content
@@ -430,18 +457,25 @@ void write_code(uint8_t *out_code, int &cur_arr_pos, int &cur_bit_pos, uint8_t t
  * @return match_len
  * we guarantee buffer_start+3 will not out of bound
  */
-tuple<int, int> match(const uint8_t *content, long long real_len, int buffer_start) {
+tuple<int, int> match(const uint8_t *content, uint64_t real_len, int buffer_start, int *index) {
     array4 to_match = {content[buffer_start], content[buffer_start+1],
                            content[buffer_start+2], content[buffer_start+3]};
     int match_len = 0;
     int match_index = 0;
+    bool matching = false;
     if (auto f = dict.find(to_match); f != dict.end()) {
         int cur_target = f->second;
-        while (true) {
+
+        // we have at least one valid matching
+        if (buffer_start-cur_target <= MAX_LEN) matching = true;
+
+        while (matching) {
             int target_index = cur_target;
             int buffer_index = buffer_start;
+            // the distance is too long, we do not use this matching pair
+            if (buffer_index-target_index > MAX_LEN) break;
             int cur_match = 0;
-            while (buffer_index < real_len && cur_match < MAX_LEN && target_index < buffer_start) {
+            while (buffer_index < real_len && target_index < buffer_start) {
                 if (content[target_index] != content[buffer_index]) break;
                 target_index++;
                 buffer_index++;
@@ -455,7 +489,7 @@ tuple<int, int> match(const uint8_t *content, long long real_len, int buffer_sta
             cur_target = index[cur_target];
         }
 
-        // update hash
+        // update hash, if matching is false the match_len will be 0, the loop will not execute
         for (int i = 0; i < match_len; ++i) {
             array4 insert = {content[buffer_start+i-3], content[buffer_start+i-2],
                              content[buffer_start+i-1], content[buffer_start+i]};
@@ -469,7 +503,8 @@ tuple<int, int> match(const uint8_t *content, long long real_len, int buffer_sta
             }
         }
     }
-    else if (buffer_start >= 3) {
+
+    if (!matching && buffer_start >= 3) {
         array4 insert = {content[buffer_start-3], content[buffer_start-2],
                          content[buffer_start-1], content[buffer_start]};
         if (auto f2 = dict.find(insert); f2 != dict.end()) {
@@ -481,23 +516,41 @@ tuple<int, int> match(const uint8_t *content, long long real_len, int buffer_sta
             index[buffer_start-3] = buffer_start-3;
         }
     }
+
     return {match_len, match_index};
 }
 
-uint32_t lz77(ifstream &in, uint8_t *out_code, int &cur_arr_pos) {
+uint32_t lz77(ifstream &in, ofstream &out) {
+    uint32_t compressed_size = 0; // return compressed_size
+
     in.clear();
     in.seekg(0, ios::beg);
-    uint32_t compressed_size = 0;
-    long long real_len = 0;
-    int cur_bit_pos = 3;
-    out_code[0] = 0b01000000;
+
+    char *input_block = new char[BLOCK]; // each time input BLOCK size chars
+    auto *content = (uint8_t *) input_block;
+    uint64_t real_len = 0;
+    // we guarantee that the out_code length of each block is smaller than the array size
+    auto *out_code = new uint8_t[2*BLOCK]{};
+    uint8_t temp_code = 0x00; // it is the code for last block which has not been written into zip
+    int temp_bit_width = 0;
+    int cur_arr_pos = 0;
+    int cur_bit_pos = 0;
+    bool isLast = false;
+    int *index = new int[BLOCK];
     do {
-        char *block = new char[BLOCK];
+        write_code(out_code, cur_arr_pos, cur_bit_pos, temp_code, temp_bit_width);
         if (in) {
-            in.read(block, BLOCK);
+            in.read(input_block, BLOCK);
             real_len = in.gcount();
         }
-        auto *content = (uint8_t *) block;
+
+        in.peek();
+        if (in.good()) write_code(out_code, cur_arr_pos, cur_bit_pos, 0b010, 3);
+        else {  // the last block
+            write_code(out_code, cur_arr_pos, cur_bit_pos, 0b110, 3);
+            isLast = true;
+        }
+
         int buffer_start = 0;
         while (buffer_start < real_len) {
             // reach the boundary, no need to update dict
@@ -508,7 +561,12 @@ uint32_t lz77(ifstream &in, uint8_t *out_code, int &cur_arr_pos) {
                 continue;
             }
 
-            auto [match_len, match_index] = match(content, real_len, buffer_start);
+            // todo
+            if (cur_arr_pos > 62098) {
+                int i = 0;
+            }
+
+            auto [match_len, match_index] = match(content, real_len, buffer_start, index);
             if (match_len) {
                 auto [len_code, bit_width1] = get_len_code(match_len);
                 write_code(out_code, cur_arr_pos, cur_bit_pos, len_code, bit_width1);
@@ -523,13 +581,44 @@ uint32_t lz77(ifstream &in, uint8_t *out_code, int &cur_arr_pos) {
                 buffer_start++;
             }
         }
-        delete [] block;
-    } while (real_len == BLOCK); // todo 目前只有一个block
-    out_code[0] |= 0b11000000;
-    uint8_t end_code = 0b0000000;
-    write_code(out_code, cur_arr_pos, cur_bit_pos, end_code, 7);
-    if (cur_bit_pos == 0) cur_arr_pos--;
-    compressed_size += cur_arr_pos + 1;
+        // write end of block
+        write_code(out_code, cur_arr_pos, cur_bit_pos, 0b0000000, 7);
+
+        // the encoding for this block is finished
+        if (isLast) cur_arr_pos++;
+        else if (cur_bit_pos != 0) {
+            temp_code = out_code[cur_arr_pos];
+            temp_bit_width = cur_bit_pos;
+        }
+
+        // todo
+
+//        int zerocount = 0;
+
+        // reverse byte
+        for (int i = 0; i < cur_arr_pos; ++i) {
+            out_code[i] = (char) reverse_table[out_code[i]];
+
+            /*if (!out_code[i]) zerocount++;
+            else zerocount = 0;
+            if (zerocount > 10) {
+                cout << i;
+                throw zerocount;
+            }*/
+        }
+        // write data
+        out.write(reinterpret_cast<char *>(out_code), cur_arr_pos);
+
+        compressed_size += cur_arr_pos;
+        cur_arr_pos = 0;
+        cur_bit_pos = 0;
+        dict.clear();
+    } while (!isLast);
+
+    delete [] input_block;
+    delete [] out_code;
+    delete [] index;
+
     return compressed_size;
 }
 

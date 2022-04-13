@@ -8,12 +8,13 @@ struct local_file_header {
     uint16_t version_extract = 0x0014;
     uint16_t bit_flag = 0x00;
     uint16_t compression_method = 0x08;
-    uint16_t last_mod_time;
-    uint16_t last_mod_date;
+    uint16_t last_mod_time {};
+    uint16_t last_mod_date {};
     uint32_t crc32 = 0x00;
+    // this field will be written to output file first, and it will be changed later after the compression
     uint32_t compressed_size = 0x00;
     uint32_t uncompressed_size = 0x00;
-    uint16_t file_name_length;
+    uint16_t file_name_length {};
     uint16_t extra_field_length = 0x00;
     
 };
@@ -35,8 +36,8 @@ struct end_of_cd_record {
     uint16_t disk_cd = 0x00;
     uint16_t disk_entries = 0x01;
     uint16_t total_entries = 0x01;
-    uint32_t cd_size;
-    uint32_t offset_cd_disk;
+    uint32_t cd_size {};
+    uint32_t offset_cd_disk {};
     uint16_t file_comment_length = 0x00;
 };
 
@@ -109,13 +110,10 @@ static const uint32_t crc32tab[] = // from https://blog.csdn.net/joeblackzqq/art
         };
 
 void set_time(uint16_t &mod_time, uint16_t &mod_date);
-void write_little_end(std::ofstream &file, const uint32_t b);
-void write_little_end(std::ofstream &file, const uint16_t b);
+void write_little_end(std::ofstream &file, uint32_t b);
+void write_little_end(std::ofstream &file, uint16_t b);
 void write_local_file_header(std::ofstream &file, local_file_header &file_header, std::string &file_cname, bool is_local_header);
 void write_cd_header(std::ofstream &file, central_directory_header &cd_header, std::string &file_cname);
 void write_end_of_cd_record(std::ofstream &file, end_of_cd_record &cdr);
-uint32_t lz77(std::ifstream &in, uint8_t *out_code, int &cur_arr_pos);
-void write_local_file_header(std::ofstream &file, local_file_header &file_header, std::string &file_cname, bool is_local_header);
-void write_cd_header(std::ofstream &file, central_directory_header &cd_header, std::string &file_cname);
-void write_end_of_cd_record(std::ofstream &file, end_of_cd_record &cdr);
-uint32_t crc32(std::ifstream &file, uint32_t size);
+uint32_t lz77(std::ifstream &in, std::ofstream  &out);
+std::tuple<uint32_t, uint32_t> crc32(std::ifstream &file, uint32_t size);

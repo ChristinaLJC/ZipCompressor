@@ -5,7 +5,7 @@
 #include <tuple>
 
 #define MAX_LEN 32768
-#define BLOCK 65536
+#define BLOCK 327680
 
 typedef std::array<uint8_t, 4> array4;
 

@@ -1,36 +1,27 @@
 #include <filesystem>
 #include <iostream>
 #include "compression.h"
-#include "lz77.h"
 
 using namespace std;
 
 int main() {
-    string file_name = "leng"; // file name without suffix
+    string file_name = "big"; // file name without suffix
     string suffix = ".txt"; // file suffix
     string file_cname = file_name + suffix; // file name with suffix
-    string input_path = "C:/Users/Christina/CLionProjects/ZipCompression2.0/"+file_cname;
+    string input_path = "C:/Users/Christina/CLionProjects/ZipCompression3.0/"+file_cname;
     ifstream input_file (input_path, ios::in);
-    ofstream output_file ("C:/Users/Christina/CLionProjects/ZipCompression2.0/"+file_name+".zip", ios::out | ios::binary);
+    ofstream output_file ("C:/Users/Christina/CLionProjects/ZipCompression3.0/"+file_name+".zip", ios::out | ios::binary);
 
     // set local file header
     local_file_header file_header;
     set_time(file_header.last_mod_time, file_header.last_mod_date);
     file_header.file_name_length = file_cname.length();
-    file_header.uncompressed_size = filesystem::file_size(input_path);
-    file_header.crc32 = crc32(input_file, file_header.uncompressed_size);
-
-    auto *out_code = new uint8_t[2*file_header.uncompressed_size] {};
-    int cur_arr_pos = 0;
-    file_header.compressed_size = lz77(input_file, out_code, cur_arr_pos);
+    auto [crc_code, uncompressed_size] = crc32(input_file, filesystem::file_size(input_path));
+    file_header.crc32 = crc_code;
+    file_header.uncompressed_size = uncompressed_size;
     write_local_file_header(output_file, file_header, file_cname, true);
 
-    // write data
-    for (int i = 0; i < cur_arr_pos+1; ++i) {
-        char temp[1] = {(char) reverse_table[out_code[i]]};
-        output_file.write(temp, 1);
-    }
-    delete [] out_code;
+    file_header.compressed_size = lz77(input_file, output_file);
 
     // set central directory header
     central_directory_header cd_header;
@@ -42,6 +33,10 @@ int main() {
     cdr.cd_size = 46 + file_cname.length();
     cdr.offset_cd_disk = 30 + file_cname.length() + file_header.compressed_size;
     write_end_of_cd_record(output_file, cdr);
+
+    // rewrite the compressed size
+    output_file.seekp(18);
+    write_little_end(output_file, file_header.compressed_size);
 
     return 0;
 }
@@ -77,14 +72,20 @@ void write_little_end(ofstream &file, const uint16_t b) {
     file.write(b_char, 2);
 }
 
-uint32_t crc32(ifstream &file, uint32_t size) { // from https://blog.csdn.net/joeblackzqq/article/details/37910839
+// from https://blog.csdn.net/joeblackzqq/article/details/37910839
+tuple<uint32_t, uint32_t> crc32(ifstream &file, uint32_t size) {
     char *content = new char[size];
-    if (file) file.read(content, size);
+    if (file) {
+        file.read(content, size);
+        size = file.gcount();
+    }
     uint32_t i, crc;
     crc = 0xFFFFFFFF;
-    for (i = 0; i < size; i++)
+    for (i = 0; i < size; i++) {
         crc = crc32tab[(crc ^ content[i]) & 0xff] ^ (crc >> 8);
-    return crc^0xFFFFFFFF;
+    }
+    delete [] content;
+    return {crc^0xFFFFFFFF, size};
 }
 
 
