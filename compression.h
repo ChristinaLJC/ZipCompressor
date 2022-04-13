@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <cstdint>
 
 struct local_file_header {
@@ -19,12 +20,12 @@ struct local_file_header {
 
 struct central_directory_header {
     uint32_t signature = 0x02014b50;
-    uint16_t version_made = 0x14;
+    uint16_t version_made = 0x0a;
     local_file_header file_header_info;
     uint16_t file_comment_length = 0x00;
     uint16_t disk_number_start = 0x00;
-    uint16_t internal_file_attributes = 0x01; //todo 应该不影响
-    uint32_t external_file_attributes = 0x20; //todo 应该不影响
+    uint16_t internal_file_attributes = 0x01;
+    uint32_t external_file_attributes = 0x20;
     uint32_t local_header_offset = 0x00;
 };
 
@@ -107,5 +108,14 @@ static const uint32_t crc32tab[] = // from https://blog.csdn.net/joeblackzqq/art
                 0xb40bbe37L, 0xc30c8ea1L, 0x5a05df1bL, 0x2d02ef8dL
         };
 
-
-
+void set_time(uint16_t &mod_time, uint16_t &mod_date);
+void write_little_end(std::ofstream &file, const uint32_t b);
+void write_little_end(std::ofstream &file, const uint16_t b);
+void write_local_file_header(std::ofstream &file, local_file_header &file_header, std::string &file_cname, bool is_local_header);
+void write_cd_header(std::ofstream &file, central_directory_header &cd_header, std::string &file_cname);
+void write_end_of_cd_record(std::ofstream &file, end_of_cd_record &cdr);
+uint32_t lz77(std::ifstream &in, uint8_t *out_code, int &cur_arr_pos);
+void write_local_file_header(std::ofstream &file, local_file_header &file_header, std::string &file_cname, bool is_local_header);
+void write_cd_header(std::ofstream &file, central_directory_header &cd_header, std::string &file_cname);
+void write_end_of_cd_record(std::ofstream &file, end_of_cd_record &cdr);
+uint32_t crc32(std::ifstream &file, uint32_t size);
