@@ -1,6 +1,6 @@
 # Project 1 - Zip Compressor - Report
 
-12011436 李佳纯
+ChristinaLJC
 
 ## Part1 - Analysis
 
